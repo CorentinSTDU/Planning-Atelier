@@ -873,7 +873,7 @@
 .dispatch-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 :root{ --amber:#e0a944; --amber-dark:#b9812a; --blue:#3d7fc9; --blue-dark:#2c5f9b; --red2:#e0433d; --green:#2f9e5c; }
 \n</style>
-<script src="https://alcdn.msauth.net/browser/3.18.0/js/msal-browser.min.js"></script>
+<script src="msal-browser.min.js"></script>
 </head>
 <body>
 
@@ -1509,10 +1509,16 @@ const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const GRAPH_FILE_CONTENT_URL = GRAPH_BASE+'/sites/'+SP_HOSTNAME+':'+SP_SITE_PATH+':/drive/root:/'+SP_FILE_PATH+':/content';
 const GRAPH_SCOPES = ['Sites.ReadWrite.All','Files.ReadWrite'];
 
-const msalInstance = new msal.PublicClientApplication({
-  auth: { clientId: MSAL_CLIENT_ID, authority: 'https://login.microsoftonline.com/'+MSAL_TENANT_ID, redirectUri: MSAL_REDIRECT_URI },
-  cache: { cacheLocation: 'localStorage' }
-});
+let msalInstance = null;
+try{
+  if(typeof msal === 'undefined') throw new Error('bibliothèque msal-browser.min.js introuvable (fichier absent du dépôt ?)');
+  msalInstance = new msal.PublicClientApplication({
+    auth: { clientId: MSAL_CLIENT_ID, authority: 'https://login.microsoftonline.com/'+MSAL_TENANT_ID, redirectUri: MSAL_REDIRECT_URI },
+    cache: { cacheLocation: 'localStorage' }
+  });
+}catch(e){
+  console.error('Connexion Microsoft indisponible :', e);
+}
 let msalAccount = null;
 
 function showSignInBanner(onClick){
@@ -1534,6 +1540,7 @@ function showSignInBanner(onClick){
 }
 
 async function ensureSignedIn(){
+  if(!msalInstance) throw new Error('Connexion Microsoft indisponible (bibliothèque manquante)');
   const accounts = msalInstance.getAllAccounts();
   if(accounts.length>0){ msalAccount = accounts[0]; return msalAccount; }
   return new Promise((resolve, reject)=>{
@@ -1546,6 +1553,7 @@ async function ensureSignedIn(){
 }
 
 async function getGraphToken(){
+  if(!msalInstance) throw new Error('Connexion Microsoft indisponible (bibliothèque manquante)');
   if(!msalAccount){ await ensureSignedIn(); if(!msalAccount) throw new Error('Non connecté'); }
   try{
     const result = await msalInstance.acquireTokenSilent({ scopes: GRAPH_SCOPES, account: msalAccount });
