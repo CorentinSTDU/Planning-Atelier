@@ -2911,9 +2911,13 @@ function openTaskModal(t){
   chkClient.addEventListener('change', ()=>{ if(chkClient.checked) chkStock.checked = false; });
 
   btnValider.addEventListener('click', ()=>{
+    if(!selMenu.value){
+      showLocalToast('\u26A0 Choisissez un utilisateur avant de valider');
+      return;
+    }
     const types = lireMatiereTypes();
     const matiere = chkStock.checked ? 'stock' : (chkClient.checked ? 'client' : null);
-    types[cleMatiereType] = { matiere, initiales: selMenu.value || null, horodatage: new Date().toISOString() };
+    types[cleMatiereType] = { matiere, initiales: selMenu.value, horodatage: new Date().toISOString() };
     ecrireMatiereTypes(types);
     rafraichirAffichageValidation();
     const valFournisseur = document.getElementById('valFournisseurMatiere');
