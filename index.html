@@ -6788,17 +6788,8 @@ function renderListView(){
     const groupHint = (mode==='machine' && p.__groupMachines && p.__groupMachines.length>1)
       ? '<div class="dl-group-hint">aussi en attente sur : '+p.__groupMachines.filter(m=>m!==currentMachine).join(', ')+'</div>' : '';
     const matiereStatus = window.getMatiereStatus ? window.getMatiereStatus(p.affaire) : null;
-    let mColor = matiereStatus==='disponible' ? '#1e8449' : '#c0392b';
-    let mTitle = matiereStatus==='disponible' ? 'Matière disponible' : (matiereStatus==='manquante' ? 'Matière pas encore entièrement reçue' : 'Statut matière inconnu — considéré comme manquant par précaution');
-    let mLettre = 'M';
-    try{
-      const typesMatiere = JSON.parse(localStorage.getItem('matiereTypeParPiece')||'{}');
-      const cleMatiere = p.affaire+'|'+String(p.piece||'').trim().toUpperCase();
-      const valeur = typesMatiere[cleMatiere];
-      const matiereChoisie = valeur ? (typeof valeur==='string' ? valeur : valeur.matiere) : null;
-      if(matiereChoisie==='stock'){ mLettre = 'MS'; mColor = '#1e8449'; mTitle = 'Matière en stock (validé)'; }
-      else if(matiereChoisie==='client'){ mLettre = 'MC'; mColor = '#1e8449'; mTitle = 'Matière client (validé)'; }
-    }catch(e){}
+    const mColor = matiereStatus==='disponible' ? '#1e8449' : '#c0392b';
+    const mTitle = matiereStatus==='disponible' ? 'Matière disponible' : (matiereStatus==='manquante' ? 'Matière pas encore entièrement reçue' : 'Statut matière inconnu — considéré comme manquant par précaution');
     const evalPiece = evaluerPiecePourTri(p);
     const row = document.createElement('div'); row.className='dl-row';
     row.innerHTML =
@@ -6806,7 +6797,7 @@ function renderListView(){
       + '<div class="dl-right"><div class="dl-delai'+(late?' late':'')+'">'+(late? ('\u26A0 en retard '+Math.abs(diff)+'j') : (formatDate(p.delai)))+'</div>'
       + (evalPiece.manquant ? '<span class="dl-machine-manquante" title="Phase '+evalPiece.phaseManquante+' sans machine assignée — cliquer pour en choisir une">\u26A0 M?</span>' : '')
       + (!evalPiece.manquant && !evalPiece.respecteDelai ? '<span class="dl-delai-risque" title="Délai probablement non respecté (phases + sous-traitance comprises)">\u23F1</span>' : '')
-      + '<span class="dl-matiere-m" style="color:'+mColor+';" title="'+mTitle+'">'+mLettre+'</span>'
+      + '<span class="dl-matiere-m" style="color:'+mColor+';" title="'+mTitle+'">M</span>'
       + '<span class="dl-arrow">&rarr;</span></div>';
     row.addEventListener('click', (e)=>{
       if(evalPiece.manquant && e.target.closest('.dl-machine-manquante')){
