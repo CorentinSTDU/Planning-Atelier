@@ -4169,13 +4169,16 @@ masquerSimulationBtnEl.addEventListener('click', ()=>{
   applyFilters();
 });
 function refreshTaskStatusColors(){
-  // ---- nettoyage de sécurité : si plusieurs tâches visuelles partagent le même opkey (doublons
-  // accumulés au fil de re-placements successifs), on ne garde que la dernière ----
-  const vusParOpkey = {};
+  // ---- nettoyage de sécurité : si plusieurs tâches visuelles partagent le même opkey ET la
+  // même pièce (doublons accumulés au fil de re-placements successifs), on ne garde que la
+  // dernière — comparer aussi la pièce, car un même numéro d'affaire peut regrouper plusieurs
+  // pièces différentes partageant coïncidemment le même numéro de phase ----
+  const vusParCle = {};
   document.querySelectorAll('.task[data-opkey]').forEach(el=>{
-    const k = el.dataset.opkey;
-    if(vusParOpkey[k]) vusParOpkey[k].remove();
-    vusParOpkey[k] = el;
+    const refPiece = el.title ? el.title.split(' \u2014 ')[0] : '';
+    const k = el.dataset.opkey+'|'+refPiece;
+    if(vusParCle[k]) vusParCle[k].remove();
+    vusParCle[k] = el;
   });
   const now = new Date();
   document.querySelectorAll('.task').forEach(taskEl=>{
