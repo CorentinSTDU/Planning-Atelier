@@ -4169,6 +4169,14 @@ masquerSimulationBtnEl.addEventListener('click', ()=>{
   applyFilters();
 });
 function refreshTaskStatusColors(){
+  // ---- nettoyage de sécurité : si plusieurs tâches visuelles partagent le même opkey (doublons
+  // accumulés au fil de re-placements successifs), on ne garde que la dernière ----
+  const vusParOpkey = {};
+  document.querySelectorAll('.task[data-opkey]').forEach(el=>{
+    const k = el.dataset.opkey;
+    if(vusParOpkey[k]) vusParOpkey[k].remove();
+    vusParOpkey[k] = el;
+  });
   const now = new Date();
   document.querySelectorAll('.task').forEach(taskEl=>{
     const opkey = taskEl.dataset.opkey;
@@ -4207,17 +4215,24 @@ function refreshTaskStatusColors(){
       const metaEl2 = taskEl.querySelector('.meta'); if(metaEl2) metaEl2.style.color = '';
     }
     // ---- Indicateur matière : badge "M" vert (matière confirmée dispo) ou rouge (manquante ou
-    // statut inconnu — on ne met jamais vert sans confirmation explicite du fichier matière) ----
+    // statut inconnu — on ne met jamais vert sans confirmation explicite du fichier matière).
+    // "MS"/"MC" en vert si Matière Stock/Client a été validé dans la fiche de la pièce. ----
     const matiereStatus = window.getMatiereStatus ? window.getMatiereStatus(entry.affaire) : null;
     let mFlag = taskEl.querySelector('.matiere-m');
-    if(!mFlag){ mFlag = el('div','matiere-m',taskEl); mFlag.textContent = 'M'; }
-    if(matiereStatus==='disponible'){
-      mFlag.style.color = '#1e8449';
-    } else {
-      mFlag.style.color = '#c0392b';
-      mFlag.title = matiereStatus==='manquante' ? 'Matière pas encore entièrement reçue' : 'Statut matière inconnu (affaire absente du fichier matière) — considéré comme manquant par précaution';
-    }
-    if(matiereStatus==='disponible') mFlag.title = 'Matière disponible';
+    if(!mFlag){ mFlag = el('div','matiere-m',taskEl); }
+    let mLettre = 'M', mCouleur = '#c0392b', mLibelle = matiereStatus==='manquante' ? 'Matière pas encore entièrement reçue' : 'Statut matière inconnu (affaire absente du fichier matière) — considéré comme manquant par précaution';
+    if(matiereStatus==='disponible'){ mCouleur = '#1e8449'; mLibelle = 'Matière disponible'; }
+    try{
+      const typesMatiere = JSON.parse(localStorage.getItem('matiereTypeParPiece')||'{}');
+      const cleMatiere = entry.affaire+'|'+String(entry.piece||'').trim().toUpperCase();
+      const valeur = typesMatiere[cleMatiere];
+      const matiereChoisie = valeur ? (typeof valeur==='string' ? valeur : valeur.matiere) : null;
+      if(matiereChoisie==='stock'){ mLettre = 'MS'; mCouleur = '#1e8449'; mLibelle = 'Matière en stock (validé)'; }
+      else if(matiereChoisie==='client'){ mLettre = 'MC'; mCouleur = '#1e8449'; mLibelle = 'Matière client (validé)'; }
+    }catch(e){}
+    mFlag.textContent = mLettre;
+    mFlag.style.color = mCouleur;
+    mFlag.title = mLibelle;
   });
 }
 updateNowLine();
@@ -6788,8 +6803,17 @@ function renderListView(){
     const groupHint = (mode==='machine' && p.__groupMachines && p.__groupMachines.length>1)
       ? '<div class="dl-group-hint">aussi en attente sur : '+p.__groupMachines.filter(m=>m!==currentMachine).join(', ')+'</div>' : '';
     const matiereStatus = window.getMatiereStatus ? window.getMatiereStatus(p.affaire) : null;
-    const mColor = matiereStatus==='disponible' ? '#1e8449' : '#c0392b';
-    const mTitle = matiereStatus==='disponible' ? 'Matière disponible' : (matiereStatus==='manquante' ? 'Matière pas encore entièrement reçue' : 'Statut matière inconnu — considéré comme manquant par précaution');
+    let mColor = matiereStatus==='disponible' ? '#1e8449' : '#c0392b';
+    let mTitle = matiereStatus==='disponible' ? 'Matière disponible' : (matiereStatus==='manquante' ? 'Matière pas encore entièrement reçue' : 'Statut matière inconnu — considéré comme manquant par précaution');
+    let mLettre = 'M';
+    try{
+      const typesMatiere = JSON.parse(localStorage.getItem('matiereTypeParPiece')||'{}');
+      const cleMatiere = p.affaire+'|'+String(p.piece||'').trim().toUpperCase();
+      const valeur = typesMatiere[cleMatiere];
+      const matiereChoisie = valeur ? (typeof valeur==='string' ? valeur : valeur.matiere) : null;
+      if(matiereChoisie==='stock'){ mLettre = 'MS'; mColor = '#1e8449'; mTitle = 'Matière en stock (validé)'; }
+      else if(matiereChoisie==='client'){ mLettre = 'MC'; mColor = '#1e8449'; mTitle = 'Matière client (validé)'; }
+    }catch(e){}
     const evalPiece = evaluerPiecePourTri(p);
     const row = document.createElement('div'); row.className='dl-row';
     row.innerHTML =
@@ -6797,7 +6821,7 @@ function renderListView(){
       + '<div class="dl-right"><div class="dl-delai'+(late?' late':'')+'">'+(late? ('\u26A0 en retard '+Math.abs(diff)+'j') : (formatDate(p.delai)))+'</div>'
       + (evalPiece.manquant ? '<span class="dl-machine-manquante" title="Phase '+evalPiece.phaseManquante+' sans machine assignée — cliquer pour en choisir une">\u26A0 M?</span>' : '')
       + (!evalPiece.manquant && !evalPiece.respecteDelai ? '<span class="dl-delai-risque" title="Délai probablement non respecté (phases + sous-traitance comprises)">\u23F1</span>' : '')
-      + '<span class="dl-matiere-m" style="color:'+mColor+';" title="'+mTitle+'">M</span>'
+      + '<span class="dl-matiere-m" style="color:'+mColor+';" title="'+mTitle+'">'+mLettre+'</span>'
       + '<span class="dl-arrow">&rarr;</span></div>';
     row.addEventListener('click', (e)=>{
       if(evalPiece.manquant && e.target.closest('.dl-machine-manquante')){
