@@ -5572,6 +5572,9 @@ async function fetchClipperOperations(){
           stt: f[nomInterne['STT']],
           tpsStt: f[nomInterne['Tps STT']],
         };
+        if(String(ligne.centreFrais||'').trim().toUpperCase()==='STT'){
+          console.log('STT DIAGNOSTIC — champ brut complet pour', ligne.article, ':', f);
+        }
         if(ligne.gacleunik) window.clipperItemIdParGacleunik[String(ligne.gacleunik).trim()] = it.id;
         if(!data[naf]) data[naf] = [];
         data[naf].push(ligne);
